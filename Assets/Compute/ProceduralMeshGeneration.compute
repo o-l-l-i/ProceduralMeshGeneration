@@ -1,0 +1,143 @@
+﻿#pragma kernel K_Generate
+
+
+RWStructuredBuffer<float3> vertexBuffer;
+RWStructuredBuffer<float3> normalBuffer;
+
+
+// Variables
+uniform uint _Size;
+uniform float _Scale;
+uniform float _Time;
+uniform float _NoiseScale;
+uniform float _Displacement;
+
+
+// Pseudo-random one liner
+float Rand(float2 co)
+{
+    return frac(sin (dot (co.xy , float2(12.9898,78.233))) * 43758.5453);
+}
+
+
+float Noise(float2 uv)
+{
+    // Tile position, flat value for each tile
+    float2 tuv = floor(uv);
+
+    // Sub-tile coordinate
+    float2 fuv = frac(uv);
+
+    // Generate noise for each corner
+    float v0 = Rand(tuv);
+    float v1 = Rand(tuv + float2(1,0));
+    float v2 = Rand(tuv + float2(0,1));
+    float v3 = Rand(tuv + float2(1,1));
+
+    // Calculate gradient
+    float2 g = smoothstep(0.0, 1.0, fuv);
+
+    // Bilinear interpolation
+
+    // Horizontal
+    float hAB = lerp(v0, v1, g.x);
+    float hCD = lerp(v2, v3, g.x);
+
+    // Vertical
+    float vABCD = lerp(hAB, hCD, g.y);
+
+    return vABCD;
+}
+
+
+// Deforms the position
+float Deform(float2 pos)
+{
+    // Scale down coordinates
+    pos /= _NoiseScale;
+
+    // Apply noise
+    pos.xy += _Time;
+    float n = Noise(pos.xy);
+
+    // Apply again
+    pos.xy -= _Time;
+    n += Noise(pos.xy * 1.23);
+
+    // Displacement intensity
+    n *= _Displacement;
+
+    return n;
+}
+
+
+// Generates a surface normal
+float3 Normal(float3 vA, float3 vB, float3 vC)
+{
+    // NORMALS
+    float3 BA = vB - vA;
+    float3 CA = vC - vA;
+
+    return (float3) cross(BA, CA);
+}
+
+
+[numthreads(8,8,1)]
+void K_Generate (uint3 id : SV_DispatchThreadID)
+{
+
+    // Skip generation if out of bounds
+    if (id.x > _Size-1 || id.y > _Size-1)
+        return;
+
+
+    // 1D indexing
+    int idx = (id.x + _Size * id.y) * 6;
+
+
+    // Triangle 1
+    // 0. vertex
+    float3 vA = float3(id.x, id.y+1, 0);
+           vA.z += Deform(vA.xy);
+    vertexBuffer[idx] = vA;
+
+    // 1. vertex
+    float3 vB = float3(id.x+1, id.y, 0);
+    vB.z += Deform(vB.xy);
+    vertexBuffer[idx+1] = vB;
+
+    // 2. vertex
+    float3 vC = float3(id.x, id.y, 0);
+    vC.z += Deform(vC.xy);
+    vertexBuffer[idx+2] = vC;
+
+    // Triangle 1 normal
+    float3 nrm = Normal(vA, vB, vC);
+    normalBuffer[idx]   = nrm;
+    normalBuffer[idx+1] = nrm;
+    normalBuffer[idx+2] = nrm;
+
+
+    // Triangle 2
+    // 3. vertex
+    vA = float3(id.x, id.y+1, 0);
+    vA.z += Deform(vA.xy);
+    vertexBuffer[idx+3] = vA;
+
+    // 4. vertex
+    vB = float3(id.x+1, id.y+1, 0);
+    vB.z += Deform(vB.xy);
+    vertexBuffer[idx+4] = vB;
+
+    // 5. vertex
+    vC = float3(id.x+1, id.y, 0);
+    vC.z += Deform(vC.xy);
+    vertexBuffer[idx+5] = vC;
+
+    // Triangle 2 normal
+    nrm = Normal(vA, vB, vC);
+    normalBuffer[idx+3] = nrm;
+    normalBuffer[idx+4] = nrm;
+    normalBuffer[idx+5] = nrm;
+
+}
