@@ -3,7 +3,7 @@
 
     Properties
     {
-        _Color   ("Diffuse Color", Color) = (1,1,1,1)
+        _Color ("Diffuse Color", Color) = (1,1,1,1)
         _SpecularStrength ("Specular Strength", float) = 100
         _SpecularExp ("Specular exponent", float) = 32
         _SpecularColor ("Specular Color", Color) = (1,1,1,1)
