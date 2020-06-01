@@ -36,3 +36,5 @@ SV_VertexID contains vertex index number, used with compute shaders. See manual:
 It seems that OnPostRender() is broken (or I couldn't get it to work.) No matter if the script as assigned to camera, the mesh didn't render. Luckily OnRenderObject() seems to work and it does not need to be attached to the camera.
 
 I built a bilinear interpolated noise deformer to the demo.
+
+© 2020 Olli Sorjonen All Rights Reserved
